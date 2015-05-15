@@ -50,8 +50,8 @@ public class HibernateUtil {
 	  }
 	  
 	  /**
-	   * Returns the Hibernate current session or opnes a new one if needed <p>
-	   * A hibernate session is tied to a specific thread and closed on commit/rollback, 
+	   * Returns the Hibernate current session or opens a new one if needed <p>
+	   * A Hibernate session is tied to a specific thread and closed on commit/rollback, 
 	   * but the session factory's getCurrentSession() method gets a new session as needed,
 	   * BUT session is not thread safe.
 	   * @return
