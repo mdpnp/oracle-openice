@@ -1,0 +1,54 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'war'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+//adding Maven repository
+repositories {
+    mavenCentral()
+}
+
+dependencies{
+
+//http://stackoverflow.com/questions/9898499/oracle-jdbc-ojdbc6-jar-as-a-maven-dependency
+//http://stackoverflow.com/a/1074971/3961519
+//compile 'com.oracle:ojdbc14:12.1.0.x'
+	
+ //MySQL JDBC connector
+	compile 'mysql:mysql-connector-java:5.1.6'
+//Oracle connector
+//http://mvnrepository.com/artifact/com.oracle/ojdbc14/10.2.0.4.0
+	compile 'com.oracle:ojdbc14:10.2.0.4.0'
+	
+ //Hibernate framework
+	//compile 'org.hibernate:hibernate-core:4.3.5.Final'
+	compile   'org.hibernate:hibernate-core:4.3.9.Final'
+	
+	//Logging
+	//NOTE 2: Hibernate 3.x uses SLF4j for logging. Hibernate 4.X uses jboss-logging
+	compile 'org.slf4j:slf4j-api:1.7.7'  //--this is actually a dependency of hibernate core
+ 	compile 'org.slf4j:slf4j-log4j12:1.7.7'  //adapter for SLF4j - log4j
+ 
+}
+
+
+buildscript {
+    repositories {
+        maven {
+            url 'http://dl.bintray.com/steffenschaefer/maven'
+        }
+        mavenCentral()
+        flatDir {
+            dirs 'lib'
+        }
+    }
+    
+    //https://github.com/flyway/flyway/issues/782
+    dependencies {
+       // files ('lib/ojdbc6.jar')
+         classpath files('lib/ojdbc6.jar')
+         fileTree(dir: 'lib', include: '*.jar')
+    }
+
+}

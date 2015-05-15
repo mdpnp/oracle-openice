@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping>
+    <class name="org.mdpnp.hiberdds.mappings.VitalValuesDTO" table="VITAL_VALUES_ORA">
+        <meta attribute="class-description">
+            This class contains the VitalValues info
+        </meta>
+
+        
+        <id name="id_vital_values" type="java.lang.Integer">
+    		<column name="id_vital_values" />
+    		<generator class="sequence-identity" >
+	        	<param name="sequence">vital_values_ora_seq</param>
+	   		</generator>
+		</id> 
+        <property name="device_id" column="DEVICE_ID"/>
+        <property name="metric_id" column="METRIC_ID"/>
+        <property name="instance_id" column="INSTANCE_ID"/>
+        <property name="time_tick" column="TIME_TICK"/>
+        <property name="vital_value" column="VITAL_VALUE"/>
+  
+    </class>
+</hibernate-mapping>
