@@ -82,6 +82,10 @@
         <!-- The VitalVAlues class uses annotations -->
         <mapping class="org.mdpnp.hiberdds.mappings.VitalValues"/>
         
+        <mapping class="org.mdpnp.hiberdds.mappings.Numeric"/>
+        <mapping class="org.mdpnp.hiberdds.mappings.NumericLifeCycle"/>
+        <mapping class="org.mdpnp.hiberdds.mappings.NumericSample"/>
+        
         <!-- AS per http://stackoverflow.com/a/2155618 -->
         <!-- <property name="hibernate.jdbc.use_get_generated_keys">true</property> -->
 
