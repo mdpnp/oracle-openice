@@ -6,6 +6,9 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 //adding Maven repository
 repositories {
+    mavenLocal()
+    maven { url 'http://build.openice.info/artifactory/libs-snapshot' }
+    maven { url 'http://build.openice.info/artifactory/libs-release' }
     mavenCentral()
 }
 
@@ -19,7 +22,7 @@ dependencies{
 	compile 'mysql:mysql-connector-java:5.1.6'
 //Oracle connector
 //http://mvnrepository.com/artifact/com.oracle/ojdbc14/10.2.0.4.0
-	compile 'com.oracle:ojdbc14:10.2.0.4.0'
+	compile 'com.oracle:ojdbc6:11.2.0.3'
 	
  //Hibernate framework
 	//compile 'org.hibernate:hibernate-core:4.3.5.Final'
@@ -29,7 +32,8 @@ dependencies{
 	//NOTE 2: Hibernate 3.x uses SLF4j for logging. Hibernate 4.X uses jboss-logging
 	compile 'org.slf4j:slf4j-api:1.7.7'  //--this is actually a dependency of hibernate core
  	compile 'org.slf4j:slf4j-log4j12:1.7.7'  //adapter for SLF4j - log4j
- 
+
+	compile 'org.mdpnp:demo-devices:0.6.2' 
 }
 
 
