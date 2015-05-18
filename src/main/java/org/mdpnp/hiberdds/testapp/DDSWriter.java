@@ -3,6 +3,7 @@ package org.mdpnp.hiberdds.testapp;
 import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.hibernate.Session;
@@ -41,6 +42,7 @@ public class DDSWriter implements DataReaderListener {
     public static void main(String[] args) throws IOException {
         IceQos.loadAndSetIceQos();
         new DDSWriter().process();
+        System.exit(0);
     }
     
     private Session session;
@@ -65,6 +67,15 @@ public class DDSWriter implements DataReaderListener {
         subscriber.get_qos(sQos);
         sQos.partition.name.add("*");
         subscriber.set_qos(sQos);
+        
+        List<Numeric> nums = session.createQuery("from Numeric").list();
+        for(Numeric n : nums) {
+            InstanceHandle_t handle = new InstanceHandle_t();
+            byte[] bytes = n.getInstance_handle();
+            handle.set_lengthI(bytes.length);
+            System.arraycopy(bytes, 0, handle.get_valuesI(), 0, bytes.length);
+            instances.put(handle, n);
+        }
         
         System.err.println("ALL SET, STARTING");
         ice.NumericDataReader reader = (ice.NumericDataReader) subscriber.create_datareader_with_profile(topic, QosProfiles.ice_library,
@@ -111,6 +122,8 @@ public class DDSWriter implements DataReaderListener {
                     Numeric persistedNumeric = instances.get(si.instance_handle);
                     
                     if(null == persistedNumeric) {
+                        
+                        
                         // TODO Query the database
                         persistedNumeric = new Numeric();
                         persistedNumeric.setInstance_id(n.instance_id);
@@ -118,8 +131,10 @@ public class DDSWriter implements DataReaderListener {
                         persistedNumeric.setUnique_device_identifier(n.unique_device_identifier);
                         persistedNumeric.setUnit_id(n.unit_id);
                         persistedNumeric.setVendor_metric_id(n.vendor_metric_id);
+                        InstanceHandle_t handle = new InstanceHandle_t(si.instance_handle);
+                        persistedNumeric.setInstance_handle(handle.get_valuesI());
                         session.saveOrUpdate(persistedNumeric);
-                        instances.put(new InstanceHandle_t(si.instance_handle), persistedNumeric);
+                        instances.put(handle, persistedNumeric);
                     }
                     
                     if(si.valid_data) {

@@ -64,9 +64,9 @@ public class Main {
 		numericSample2.setNumeric(numericTopic);
 		numericLifecycle.setNumeric(numericTopic);
 
-		numericTopic.getNumericSamples().add(numericSample1);
-		numericTopic.getNumericSamples().add(numericSample2);
-		numericTopic.getNumericLifeCyleCol().add(numericLifecycle);
+//		numericTopic.getNumericSamples().add(numericSample1);
+//		numericTopic.getNumericSamples().add(numericSample2);
+//		numericTopic.getNumericLifeCyleCol().add(numericLifecycle);
 		
 		session.save(numericSample1);
 		session.save(numericSample2);
@@ -115,9 +115,9 @@ public class Main {
 		numericTopic.setUnit_id("unit_ID");
 //		numericTopic.setInstance_handle(null);
 
-		numericTopic.getNumericSamples().add(numericSample1);
-		numericTopic.getNumericSamples().add(numericSample2);	
-		numericTopic.getNumericLifeCyleCol().add(numericLifecycle);
+//		numericTopic.getNumericSamples().add(numericSample1);
+//		numericTopic.getNumericSamples().add(numericSample2);	
+//		numericTopic.getNumericLifeCyleCol().add(numericLifecycle);
 
 		session.save(numericTopic);
 	    session.getTransaction().commit();
@@ -143,7 +143,8 @@ public class Main {
 		numericSample1.setDevice_time(d1);
 		numericSample1.setPresentation_time(d1);
 		numericSample1.setSource_time(d1);
-		numericTopic.getNumericSamples().add(numericSample1);
+		numericSample1.setNumeric(numericTopic);
+//		numericTopic.getNumericSamples().add(numericSample1);
 		
 		NumericSample numericSample2 = new NumericSample();
 		Date d2 = new Date();
@@ -151,12 +152,14 @@ public class Main {
 		numericSample2.setDevice_time(d2);
 		numericSample2.setPresentation_time(d2);
 		numericSample2.setSource_time(d2);
-		numericTopic.getNumericSamples().add(numericSample2);
+		numericSample2.setNumeric(numericTopic);
+//		numericTopic.getNumericSamples().add(numericSample2);
 		//create demo numeric lifecycle
 		NumericLifeCycle numericLifecycle = new NumericLifeCycle();
 		numericLifecycle.setAlive(1);
 		numericLifecycle.setTime(new Date());
-		numericTopic.getNumericLifeCyleCol().add(numericLifecycle);
+		
+//		numericTopic.getNumericLifeCyleCol().add(numericLifecycle);
 		//
 		Session session = HibernateUtil.getSessionFactory().openSession();	 
 		session.beginTransaction();
