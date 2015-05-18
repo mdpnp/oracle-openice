@@ -9,6 +9,7 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
@@ -24,7 +25,7 @@ import javax.persistence.TemporalType;
 
 @SuppressWarnings("serial")
 @Entity
-@Table(name = "NUMERIC_LIFECYCLE")
+@Table(name = "NUMERIC_LIFECYCLE", indexes = {@Index(name="fk_lifecycle_numeric", columnList="id_numeric", unique=false)})
 public class NumericLifeCycle implements Serializable{
 	
 	@Id
