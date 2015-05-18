@@ -5,14 +5,19 @@ import java.util.HashSet;
 import java.util.Set;
 
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
+
+import org.hibernate.annotations.Cascade;
+import org.hibernate.annotations.CascadeType;
 
 /**
  * @author diego@mdpnp.org
@@ -28,7 +33,9 @@ public class Numeric implements Serializable {
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "numer_seq")
 	@SequenceGenerator(name = "numer_seq",  sequenceName = "numeric_ora_seq", allocationSize = 1, initialValue = 1)
 	private int id_numeric;
-	private Object instance_handle;
+	
+//	@Column(name="instance_handle")
+//	private Object instance_handle;
 	
 	@Column(name = "unique_device_identifier")
 	private String unique_device_identifier;
@@ -41,7 +48,16 @@ public class Numeric implements Serializable {
 	@Column(name = "UNIT_ID")
 	private String unit_id;
 	
+	@ElementCollection(targetClass=NumericSample.class)
+	@Column(name="id_numeric_sample") //@JoinColumn
+	@OneToMany(fetch = FetchType.LAZY, mappedBy = "numeric") 
+	@Cascade({CascadeType.ALL})
 	private Set<NumericSample> numericSamples = new HashSet<NumericSample>(0);
+	
+	@ElementCollection(targetClass=NumericLifeCycle.class)
+	@Column(name="id_numeric_lifecycle")//@JoinColumn
+	@OneToMany(fetch = FetchType.LAZY, mappedBy = "numeric")
+	@Cascade({CascadeType.ALL})
 	private Set<NumericLifeCycle> numericLifeCyleCol = new HashSet<NumericLifeCycle>(0);
 	
 	public Numeric(){}
@@ -62,13 +78,13 @@ public class Numeric implements Serializable {
 		this.id_numeric = id_numeric;
 	}
 
-	public Object getInstance_handle() {
-		return instance_handle;
-	}
-
-	public void setInstance_handle(Object instance_handle) {
-		this.instance_handle = instance_handle;
-	}
+//	public Object getInstance_handle() {
+//		return instance_handle;
+//	}
+//
+//	public void setInstance_handle(Object instance_handle) {
+//		this.instance_handle = instance_handle;
+//	}
 
 	public String getUnique_device_identifier() {
 		return unique_device_identifier;
@@ -113,7 +129,7 @@ public class Numeric implements Serializable {
 	//TODO Complete these annotations based on
 	//https://docs.jboss.org/hibernate/orm/3.6/reference/en-US/html/collections.html#example.collection.mapping.annotations
 
-	@OneToMany(fetch = FetchType.LAZY, mappedBy = "numeric")
+
 	public Set<NumericSample> getNumericSamples() {
 		return numericSamples;
 	}
@@ -122,7 +138,6 @@ public class Numeric implements Serializable {
 		this.numericSamples = numericSamples;
 	}
 
-	@OneToMany(fetch = FetchType.LAZY, mappedBy = "numeric")
 	public Set<NumericLifeCycle> getNumericLifeCyleCol() {
 		return numericLifeCyleCol;
 	}

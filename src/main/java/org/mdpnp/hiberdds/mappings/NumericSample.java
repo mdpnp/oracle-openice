@@ -5,9 +5,12 @@ import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
@@ -26,7 +29,12 @@ public class NumericSample implements Serializable {
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "numer_sam_seq")
 	@SequenceGenerator(name = "numer_sam_seq",  sequenceName = "numeric_sample_seq", allocationSize = 1, initialValue = 1)
 	private int id_numeric_sample;
-	private int id_numeric;	
+	
+//	@JoinColumn(name="id_numeric")
+//	private int id_numeric;	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "id_numeric", nullable = false)
+	private Numeric numeric;
 	
 	@Column(name="value")
 	private int value;
@@ -61,14 +69,14 @@ public class NumericSample implements Serializable {
 	}
 
 
-	public int getId_numeric() {
-		return id_numeric;
-	}
-
-
-	public void setId_numeric(int id_numeric) {
-		this.id_numeric = id_numeric;
-	}
+//	public int getId_numeric() {
+//		return id_numeric;
+//	}
+//
+//
+//	public void setId_numeric(int id_numeric) {
+//		this.id_numeric = id_numeric;
+//	}
 
 
 	public Date getSource_time() {
@@ -108,6 +116,14 @@ public class NumericSample implements Serializable {
 
 	public void setPresentation_time(Date presentation_time) {
 		this.presentation_time = presentation_time;
+	}
+
+	public Numeric getNumeric() {
+		return numeric;
+	}
+
+	public void setNumeric(Numeric numeric) {
+		this.numeric = numeric;
 	}
 	
 	

@@ -24,4 +24,3 @@ BEGIN
   INTO   :new.ID_VITAL_VALUES
   FROM   dual;
 END;
-/

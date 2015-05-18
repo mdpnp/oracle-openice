@@ -5,9 +5,12 @@ import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
@@ -28,7 +31,13 @@ public class NumericLifeCycle implements Serializable{
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "numer_lc_seq")
 	@SequenceGenerator(name = "numer_lc_seq",  sequenceName = "numeric_lifecycle_seq", allocationSize = 1, initialValue = 1)
 	private int id_numeric_lifecycle;
-	private int id_numeric;
+	
+//	@JoinColumn(name="id_numeric")
+//	private int id_numeric;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "id_numeric", nullable = false)
+	private Numeric numeric;
 	
 	@Temporal(TemporalType.DATE)
 	@Column(name = "TIME")
@@ -57,14 +66,14 @@ public class NumericLifeCycle implements Serializable{
 	}
 
 
-	public int getId_numeric() {
-		return id_numeric;
-	}
-
-
-	public void setId_numeric(int id_numeric) {
-		this.id_numeric = id_numeric;
-	}
+//	public int getId_numeric() {
+//		return id_numeric;
+//	}
+//
+//
+//	public void setId_numeric(int id_numeric) {
+//		this.id_numeric = id_numeric;
+//	}
 
 
 	public Date getTime() {
@@ -84,6 +93,14 @@ public class NumericLifeCycle implements Serializable{
 
 	public void setAlive(int alive) {
 		this.alive = alive;
+	}
+
+	public Numeric getNumeric() {
+		return numeric;
+	}
+
+	public void setNumeric(Numeric numeric) {
+		this.numeric = numeric;
 	}
 	
 	
