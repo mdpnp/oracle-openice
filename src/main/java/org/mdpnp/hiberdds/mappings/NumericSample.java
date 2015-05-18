@@ -39,15 +39,15 @@ public class NumericSample implements Serializable {
 	@Column(name="value")
 	private int value;
 	
-	@Temporal(TemporalType.DATE)
+	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "source_time")
 	private Date source_time;
 	
-	@Temporal(TemporalType.DATE)
+	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "device_time")
 	private Date device_time;
 	
-	@Temporal(TemporalType.DATE)
+	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "presentation_time")
 	private Date presentation_time;
 	

@@ -39,7 +39,7 @@ public class NumericLifeCycle implements Serializable{
 	@JoinColumn(name = "id_numeric", nullable = false)
 	private Numeric numeric;
 	
-	@Temporal(TemporalType.DATE)
+	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "TIME")
 	private Date time;
 	
