@@ -23,7 +23,7 @@ import javax.persistence.TemporalType;
  */
 @SuppressWarnings("serial")
 @Entity
-@Table(name = "NUMERIC_SAMPLE", indexes = {@Index(name="fk_id_numeric", columnList="id_numeric", unique=false)})
+@Table(name = "numeric_sample", indexes = {@Index(name="fk_id_numeric", columnList="id_numeric", unique=false)})
 public class NumericSample implements Serializable {
 	
 	@Id
@@ -37,19 +37,19 @@ public class NumericSample implements Serializable {
 	@JoinColumn(name = "id_numeric", nullable = false)
 	private Numeric numeric;
 	
-	@Column(name="value")
+	@Column(name="value",nullable=false)
 	private int value;
 	
 	@Temporal(TemporalType.TIMESTAMP)
-	@Column(name = "source_time")
+	@Column(name = "source_time",nullable=false)
 	private Date source_time;
 	
 	@Temporal(TemporalType.TIMESTAMP)
-	@Column(name = "device_time")
+	@Column(name = "device_time",nullable=true)
 	private Date device_time;
 	
 	@Temporal(TemporalType.TIMESTAMP)
-	@Column(name = "presentation_time")
+	@Column(name = "presentation_time",nullable=true)
 	private Date presentation_time;
 	
 	

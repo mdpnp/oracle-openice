@@ -1,7 +1,9 @@
 package org.mdpnp.hiberdds.testapp;
 
 import java.io.Serializable;
+import java.util.Base64;
 import java.util.Date;
+import java.util.UUID;
 
 import org.hibernate.Session;
 import org.mdpnp.hiberdds.db.Manager;
@@ -26,6 +28,26 @@ public class Main {
 
 	}
 	
+	private static final Base64.Encoder b64Encoder = Base64.getEncoder();
+	private static String randomInstanceHandle() {
+	    UUID uuid = UUID.randomUUID();
+	    byte[] bytes = new byte[16];
+	    
+        long msb = uuid.getMostSignificantBits();
+        long lsb = uuid.getLeastSignificantBits();
+        
+        for (int i=0; i<8; i++) {
+            msb = bytes[i] & 0xff;
+            msb >>= 8;
+        }
+        for (int i=8; i<16; i++) {
+            lsb = bytes[i] & 0xff;
+            lsb >>= 8;
+        }
+        return b64Encoder.encodeToString(bytes);
+	}
+	
+	
 	//TODO: This test should be made differently. Use JUNIT to test.
 	private static void testOneToMany(){
 		//create test numeric topic
@@ -35,7 +57,7 @@ public class Main {
 		numericTopic.setVendor_metric_id("vendor_metric_ID");
 		numericTopic.setInstance_id(0);
 		numericTopic.setUnit_id("unit_ID");
-		numericTopic.setInstance_handle(new byte[16]);
+		numericTopic.setInstance_handle(randomInstanceHandle());
 		
 		//create test numeric samples
 		NumericSample numericSample1 = new NumericSample();

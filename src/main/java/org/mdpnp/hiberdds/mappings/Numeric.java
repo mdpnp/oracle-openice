@@ -1,23 +1,15 @@
 package org.mdpnp.hiberdds.mappings;
 
 import java.io.Serializable;
-import java.util.HashSet;
-import java.util.Set;
 
 import javax.persistence.Column;
-import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.OneToMany;
+import javax.persistence.Index;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
-
-import org.hibernate.annotations.Cascade;
-import org.hibernate.annotations.CascadeType;
 
 /**
  * @author diego@mdpnp.org
@@ -26,7 +18,17 @@ import org.hibernate.annotations.CascadeType;
 
 @SuppressWarnings("serial")
 @Entity
-@Table(name = "NUMERIC")
+@Table(name = "numeric", 
+       indexes = {
+        @Index(name="numeric_unique_keys", 
+               columnList=", metric_id, instance_id, vendor_metric_id, unit_id", 
+               unique=true),
+        @Index(name="numeric_instance_handle",
+               columnList="instance_handle",
+               unique=true)
+        
+       }
+      )
 public class Numeric implements Serializable {
 	
 	@Id
@@ -34,18 +36,21 @@ public class Numeric implements Serializable {
 	@SequenceGenerator(name = "numer_seq",  sequenceName = "numeric_ora_seq", allocationSize = 1, initialValue = 1)
 	private int id_numeric;
 	
-	@Column(name="instance_handle",length=16,nullable=false)
-	private byte[] instance_handle;
+	// This will be base64 encoded
+	@Column(name="instance_handle",length=24,nullable=false)
+	private String instance_handle;
 	
-	@Column(name = "unique_device_identifier")
+	@Column(name = "unique_device_identifier", length=64, nullable=false)
 	private String unique_device_identifier;
-	@Column(name = "METRIC_ID")
+	@Column(name = "metric_id", length=64, nullable=false)
 	private String metric_id;
-	@Column(name = "VENDOR_METRIC_ID")
+	// Oracle treats empty string as NULL and empty string is legal 
+	@Column(name = "vendor_metric_id", length=64, nullable=true)
 	private String vendor_metric_id;
-	@Column(name = "INSTANCE_ID")
+	@Column(name = "instance_id", nullable = false)
 	private int instance_id;
-	@Column(name = "UNIT_ID")
+	   // Oracle treats empty string as NULL and empty string is legal 
+	@Column(name = "unit_id", length=64, nullable = true)
 	private String unit_id;
 	
 //	@ElementCollection(targetClass=NumericSample.class)
@@ -126,10 +131,10 @@ public class Numeric implements Serializable {
 		this.unit_id = unit_id;
 	}
 	
-	public byte[] getInstance_handle() {
+	public String getInstance_handle() {
         return instance_handle;
     }
-	public void setInstance_handle(byte[] instance_handle) {
+	public void setInstance_handle(String instance_handle) {
         this.instance_handle = instance_handle;
     }
 	

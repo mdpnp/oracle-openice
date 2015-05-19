@@ -25,7 +25,7 @@ import javax.persistence.TemporalType;
 
 @SuppressWarnings("serial")
 @Entity
-@Table(name = "NUMERIC_LIFECYCLE", indexes = {@Index(name="fk_lifecycle_numeric", columnList="id_numeric", unique=false)})
+@Table(name = "numeric_lifecycle", indexes = {@Index(name="fk_lifecycle_numeric", columnList="id_numeric", unique=false)})
 public class NumericLifeCycle implements Serializable{
 	
 	@Id
@@ -41,10 +41,10 @@ public class NumericLifeCycle implements Serializable{
 	private Numeric numeric;
 	
 	@Temporal(TemporalType.TIMESTAMP)
-	@Column(name = "TIME")
+	@Column(name = "time")
 	private Date time;
 	
-	@Column(name = "ALIVE")
+	@Column(name = "alive")
 	private int alive;
 	
 	
