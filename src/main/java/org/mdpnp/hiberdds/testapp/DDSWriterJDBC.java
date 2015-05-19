@@ -1,0 +1,201 @@
+package org.mdpnp.hiberdds.testapp;
+
+import java.io.IOException;
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Base64;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
+import org.mdpnp.devices.IceQos;
+import org.mdpnp.hiberdds.mappings.Numeric;
+import org.mdpnp.hiberdds.mappings.NumericSample;
+import org.mdpnp.hiberdds.util.HibernateUtil;
+import org.mdpnp.rtiapi.data.QosProfiles;
+
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.rti.dds.domain.DomainParticipant;
+import com.rti.dds.domain.DomainParticipantFactory;
+import com.rti.dds.infrastructure.InstanceHandle_t;
+import com.rti.dds.infrastructure.RETCODE_NO_DATA;
+import com.rti.dds.infrastructure.ResourceLimitsQosPolicy;
+import com.rti.dds.infrastructure.StatusKind;
+import com.rti.dds.subscription.InstanceStateKind;
+import com.rti.dds.subscription.SampleInfo;
+import com.rti.dds.subscription.SampleInfoSeq;
+import com.rti.dds.subscription.SampleStateKind;
+import com.rti.dds.subscription.Subscriber;
+import com.rti.dds.subscription.SubscriberQos;
+import com.rti.dds.subscription.ViewStateKind;
+import com.rti.dds.topic.Topic;
+
+public class DDSWriterJDBC {
+    
+    
+    public static void main(String[] args) throws IOException, InterruptedException, SQLException {
+        IceQos.loadAndSetIceQos();
+        DDSWriterJDBC writer = new DDSWriterJDBC();
+        writer.start();
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        ScheduledFuture<?> task = executor.scheduleAtFixedRate(()->writer.poll(), 1000L-System.currentTimeMillis()%1000L, 10000L, TimeUnit.MILLISECONDS);
+        System.in.read();
+        task.cancel(false);
+        executor.shutdown();
+        executor.awaitTermination(1, TimeUnit.MINUTES);
+        writer.stop();
+        System.exit(0);
+    }
+    
+    private final Base64.Decoder b64Decoder = Base64.getDecoder();
+    private final Base64.Encoder b64Encoder = Base64.getEncoder();
+    
+    private DomainParticipant participant;
+    private Topic topic;
+    private Subscriber subscriber;
+    private ice.NumericDataReader reader;
+    private Connection conn;
+    private CallableStatement insertUpdateNumeric;
+    private PreparedStatement insertNumericSample;
+    
+    public void start() throws SQLException {
+        conn = DriverManager.getConnection("jdbc:oracle:thin:@192.168.7.25:1521/XE", "openice", "openice");
+        
+        insertNumericSample = conn.prepareStatement("INSERT INTO NUMERIC_SAMPLE (ID_NUMERIC_SAMPLE, ID_NUMERIC, DEVICE_TIME, PRESENTATION_TIME, SOURCE_TIME, VALUE) VALUES (NUMERIC_SAMPLE_SEQ.NEXTVAL, ?, ?, ?, ?, ?)");
+//        insertNumericSample = conn.prepareCall("{? = call insert_update_numeric_sample(?, ?, ?, ?, ?)}");
+//        insertNumericSample.registerOutParameter(1, java.sql.Types.INTEGER);
+        insertUpdateNumeric = conn.prepareCall("{? = call insert_update_numeric (?, ?, ?, ?, ?, ?)}");
+        insertUpdateNumeric.registerOutParameter(1, java.sql.Types.INTEGER);
+        
+        {
+            PreparedStatement ps = null;
+            ResultSet rs = null;
+            
+            try {
+                ps = conn.prepareStatement("SELECT id_numeric, instance_handle FROM numeric");
+                rs = ps.executeQuery();
+                
+                int count = 0;
+                while(rs.next()) {
+                    instances.put(rs.getString(2), rs.getLong(1));
+                    count++;
+                }
+
+                System.err.println("PRELOADED " + count + " numerics");
+            } finally {
+                if(null != rs) {
+                    rs.close();
+                }
+                if(null != ps) {
+                    ps.close();
+                }
+            }
+        }
+        
+        participant = DomainParticipantFactory.get_instance().create_participant(0, 
+                DomainParticipantFactory.PARTICIPANT_QOS_DEFAULT,
+                null,
+                StatusKind.STATUS_MASK_NONE);
+        
+        ice.NumericTypeSupport.register_type(participant, ice.NumericTypeSupport.get_type_name());
+        
+        topic = participant.create_topic(ice.NumericTopic.VALUE, ice.NumericTypeSupport.get_type_name(),
+                DomainParticipant.TOPIC_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+        
+        subscriber = participant.create_subscriber(DomainParticipant.SUBSCRIBER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
+        
+        SubscriberQos sQos = new SubscriberQos();
+        subscriber.get_qos(sQos);
+        sQos.partition.name.add("*");
+        subscriber.set_qos(sQos);
+        
+        reader = (ice.NumericDataReader) subscriber.create_datareader_with_profile(topic, QosProfiles.ice_library,
+                QosProfiles.numeric_data, null, StatusKind.STATUS_MASK_NONE);
+
+    }
+    
+    public void stop() {
+        reader.delete_contained_entities();
+        subscriber.delete_datareader(reader);
+        participant.delete_subscriber(subscriber);
+        participant.delete_topic(topic);
+        ice.NumericTypeSupport.unregister_type(participant, ice.NumericTypeSupport.get_type_name());
+        DomainParticipantFactory.get_instance().delete_participant(participant);
+
+    }
+
+    
+    private final ice.NumericSeq numericSequence = new ice.NumericSeq();
+    private final SampleInfoSeq  sampleInfoSequence = new SampleInfoSeq();
+    
+    Cache<String, Long> instances = CacheBuilder.newBuilder()
+            .maximumSize(1000)
+            .expireAfterAccess(10, TimeUnit.MINUTES)
+            .build();
+    
+    public void poll() {
+        long start = System.nanoTime();
+
+        try {
+            System.err.println("START POLL");
+
+            reader.take(numericSequence, sampleInfoSequence, ResourceLimitsQosPolicy.LENGTH_UNLIMITED, SampleStateKind.ANY_SAMPLE_STATE,
+                    ViewStateKind.ANY_VIEW_STATE, InstanceStateKind.ANY_INSTANCE_STATE);
+            final int sz = sampleInfoSequence.size();
+            System.err.println("Handling " + sz + " samples");
+            
+            insertNumericSample.clearBatch();
+            for(int i = 0; i < sz; i++) {
+                
+                SampleInfo si = (SampleInfo) sampleInfoSequence.get(i);
+                ice.Numeric n = (ice.Numeric) numericSequence.get(i);
+                
+                String strInstanceHandle = b64Encoder.encodeToString(si.instance_handle.get_valuesI());
+                Long persistedNumeric = instances.getIfPresent(strInstanceHandle);
+                
+                if(null == persistedNumeric) {
+                    insertUpdateNumeric.clearParameters();
+                    insertUpdateNumeric.setString(2, strInstanceHandle);
+                    insertUpdateNumeric.setInt(3, n.instance_id);
+                    insertUpdateNumeric.setString(4, n.metric_id);
+                    insertUpdateNumeric.setString(5, n.unique_device_identifier);
+                    insertUpdateNumeric.setString(6, n.unit_id);
+                    insertUpdateNumeric.setString(7, n.vendor_metric_id);
+                    insertUpdateNumeric.execute();                    
+
+                    persistedNumeric = insertUpdateNumeric.getLong(1);
+                    instances.put(strInstanceHandle, persistedNumeric);
+                }
+                
+                if(si.valid_data) {
+                    insertNumericSample.clearParameters();
+                    insertNumericSample.setLong(1, persistedNumeric);
+                    insertNumericSample.setTimestamp(2, new java.sql.Timestamp(n.device_time.sec * 1000L + n.device_time.nanosec / 1000000L));
+                    insertNumericSample.setTimestamp(3, new java.sql.Timestamp(n.presentation_time.sec * 1000L + n.presentation_time.nanosec / 1000000L));
+                    insertNumericSample.setTimestamp(4, new java.sql.Timestamp(si.source_timestamp.sec * 1000L + si.source_timestamp.nanosec / 1000000L));
+                    // TODO this should be a floating point number
+                    insertNumericSample.setFloat(5, n.value);
+                    insertNumericSample.addBatch();
+                }
+            }
+            insertNumericSample.executeBatch();
+        } catch (RETCODE_NO_DATA noData) {
+            // TODO is it better to rollback or commit an empty transaction? 
+            return;
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        } finally {
+            reader.return_loan(numericSequence, sampleInfoSequence);
+            long elapsed = System.nanoTime()-start;
+            System.err.println("END POLL took " + (elapsed/1000000000L)+"."+(elapsed%1000000000L) + " seconds");
+        }
+    }
+}
