@@ -12,6 +12,8 @@ import org.mdpnp.hiberdds.mappings.VitalValues;
 import org.mdpnp.hiberdds.mappings.VitalValuesDTO;
 import org.mdpnp.hiberdds.util.HibernateUtil;
 
+import com.rti.dds.infrastructure.InstanceHandle_t;
+
 public class Main {
 
 	public static void main(String[] args) {
@@ -33,7 +35,7 @@ public class Main {
 		numericTopic.setVendor_metric_id("vendor_metric_ID");
 		numericTopic.setInstance_id(0);
 		numericTopic.setUnit_id("unit_ID");
-//		numericTopic.setInstance_handle(null);
+		numericTopic.setInstance_handle(new byte[16]);
 		
 		//create test numeric samples
 		NumericSample numericSample1 = new NumericSample();
