@@ -46,7 +46,7 @@
 
 <!-- 		<property name="dialect">org.hibernate.dialect.MySQLDialect</property>  -->
 
-
+        <property name="jdbc.batch_size">1000</property>
 
         <!-- Enable Hibernate's automatic session context management -->
         <property name="current_session_context_class">thread</property>
