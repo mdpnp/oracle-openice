@@ -17,64 +17,59 @@ import com.rti.dds.subscription.SampleStateKind;
 import com.rti.dds.subscription.Subscriber;
 import com.rti.dds.subscription.ViewStateKind;
 
-public class NumericUtil extends AbstractIceType {
+public class AlertUtil extends AbstractIceType {
     private final String topicString;
-    private ice.NumericDataReader reader;
+    private ice.AlertDataReader reader;
     public void register(final DomainParticipant participant, final Subscriber subscriber) {
-        ice.NumericTypeSupport.register_type(participant, ice.NumericTypeSupport.get_type_name());
-        topic = participant.create_topic(topicString, ice.NumericTypeSupport.get_type_name(),
+        ice.AlertTypeSupport.register_type(participant, ice.AlertTypeSupport.get_type_name());
+        topic = participant.create_topic(topicString, ice.AlertTypeSupport.get_type_name(),
                 DomainParticipant.TOPIC_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
-        reader = (ice.NumericDataReader) subscriber.create_datareader_with_profile(topic, QosProfiles.ice_library,
+        reader = (ice.AlertDataReader) subscriber.create_datareader_with_profile(topic, QosProfiles.ice_library,
                 QosProfiles.numeric_data, null, StatusKind.STATUS_MASK_NONE);
     }
     
-    public NumericUtil(final String topicString) {
+    public AlertUtil(final String topicString) {
         this.topicString = topicString;
     }
     
     public void prepare(final Connection conn) throws SQLException {
-        insertSample = conn.prepareStatement("INSERT INTO NUMERIC_SAMPLE (NUMERIC_SAMPLE_ID, NUMERIC_ID, SOURCE_TIME, VALUE) VALUES (NUMERIC_SAMPLE_SEQ.NEXTVAL, ?, ?, ?)");
-        insertUpdateInstance = conn.prepareCall("{? = call INSERT_UPDATE_NUMERIC (?, ?, ?, ?, ?)}");
+        String sqlName = topicString.toUpperCase();
+        insertSample = conn.prepareStatement("INSERT INTO "+sqlName+"_SAMPLE ("+sqlName+"_SAMPLE_ID, "+sqlName+"_ID, SOURCE_TIME, TEXT) VALUES ("+sqlName+"_SAMPLE_SEQ.NEXTVAL, ?, ?, ?)");
+        insertUpdateInstance = conn.prepareCall("{? = call INSERT_UPDATE_"+sqlName+" (?, ?)}");
         insertUpdateInstance.registerOutParameter(1, java.sql.Types.INTEGER);
     }
     
-    private int batchUpdate(final ice.NumericDataReader reader, final ice.NumericSeq numericSequence, final SampleInfoSeq sampleInfoSequence) throws SQLException {
+    private int batchUpdate(final ice.AlertDataReader reader, final ice.AlertSeq alertSequence, final SampleInfoSeq sampleInfoSequence) throws SQLException {
         insertSample.clearBatch();
         final int sz = sampleInfoSequence.size();
         for(int i = 0; i < sz; i++) {
             
             SampleInfo si = (SampleInfo) sampleInfoSequence.get(i);
-            ice.Numeric n = (ice.Numeric) numericSequence.get(i);
+            ice.Alert a = (ice.Alert) alertSequence.get(i);
             
-            Long persistedNumeric = instances.getIfPresent(si.instance_handle);
+            Long persistedAlert = instances.getIfPresent(si.instance_handle);
             
             if(!si.valid_data) {
-                reader.get_key_value(n, si.instance_handle);
+                reader.get_key_value(a, si.instance_handle);
             }
             
-            if(null == persistedNumeric) {
+            if(null == persistedAlert) {
                 insertUpdateInstance.clearParameters();
-                insertUpdateInstance.setString(2, n.unique_device_identifier);
-                insertUpdateInstance.setString(3, n.metric_id);
-                insertUpdateInstance.setString(4, n.vendor_metric_id);
-                insertUpdateInstance.setInt(5, n.instance_id);
-                insertUpdateInstance.setString(6, n.unit_id);
+                insertUpdateInstance.setString(2, a.unique_device_identifier);
+                insertUpdateInstance.setString(3, a.identifier);
                 insertUpdateInstance.execute();
 
-                persistedNumeric = insertUpdateInstance.getLong(1);
+                persistedAlert = insertUpdateInstance.getLong(1);
                 
-                System.err.println("From DB this instance is " + persistedNumeric);
-                instances.put(new InstanceHandle_t(si.instance_handle), persistedNumeric);
+                System.err.println("From DB this instance is " + persistedAlert);
+                instances.put(new InstanceHandle_t(si.instance_handle), persistedAlert);
             }
             
             if(si.valid_data) {
                 insertSample.clearParameters();
-                insertSample.setLong(1, persistedNumeric);
-//                insertNumericSample.setTimestamp(2, new java.sql.Timestamp(n.device_time.sec * 1000L + n.device_time.nanosec / 1000000L));
-//                insertNumericSample.setTimestamp(3, new java.sql.Timestamp(n.presentation_time.sec * 1000L + n.presentation_time.nanosec / 1000000L));
+                insertSample.setLong(1, persistedAlert);
                 insertSample.setTimestamp(2, new java.sql.Timestamp(si.source_timestamp.sec * 1000L + si.source_timestamp.nanosec / 1000000L));
-                // TODO this should be a floating point number
-                insertSample.setFloat(3, n.value);
+                insertSample.setString(3, a.text);
                 insertSample.addBatch();
             }
         }
@@ -86,23 +81,24 @@ public class NumericUtil extends AbstractIceType {
         reader.delete_contained_entities();
         subscriber.delete_datareader(reader);
         participant.delete_topic(topic);
-        ice.NumericTypeSupport.unregister_type(participant, ice.NumericTypeSupport.get_type_name());
+        // Ugh i'm so sick of dealing with this API
+//        ice.AlertTypeSupport.unregister_type(participant, ice.AlertTypeSupport.get_type_name());
         
         insertUpdateInstance.close();
         insertSample.close();
     }
     
-    private final ice.NumericSeq numericSequence = new ice.NumericSeq();
+    private final ice.AlertSeq alertSequence = new ice.AlertSeq();
     private final SampleInfoSeq  sampleInfoSequence = new SampleInfoSeq();
     
     public int poll() {
         int size = 0;
         try {
-            reader.take(numericSequence, sampleInfoSequence, ResourceLimitsQosPolicy.LENGTH_UNLIMITED, SampleStateKind.ANY_SAMPLE_STATE,
+            reader.take(alertSequence, sampleInfoSequence, ResourceLimitsQosPolicy.LENGTH_UNLIMITED, SampleStateKind.ANY_SAMPLE_STATE,
                     ViewStateKind.ANY_VIEW_STATE, InstanceStateKind.ANY_INSTANCE_STATE);
             final int sz = size = sampleInfoSequence.size();
             System.err.println("POLL "+sz+" samples");
-            batchUpdate(reader, numericSequence, sampleInfoSequence);
+            batchUpdate(reader, alertSequence, sampleInfoSequence);
             insertSample.getConnection().commit();
         } catch (RETCODE_NO_DATA noData) {
             // TODO is it better to rollback or commit an empty transaction? 
@@ -111,7 +107,7 @@ public class NumericUtil extends AbstractIceType {
             throwable.printStackTrace();
             return 0;
         } finally {
-            reader.return_loan(numericSequence, sampleInfoSequence);
+            reader.return_loan(alertSequence, sampleInfoSequence);
 
         }
         return size;

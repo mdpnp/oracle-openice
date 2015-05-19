@@ -41,7 +41,9 @@ public class DDSWriterJDBC {
     private Connection conn;
     
     private final IceType[] iceTypes = new IceType[] {
-      new NumericUtil()      
+      new NumericUtil(ice.NumericTopic.VALUE),
+      new AlertUtil(ice.PatientAlertTopic.VALUE),
+      new AlertUtil(ice.TechnicalAlertTopic.VALUE)
     };
 
     public void start() throws SQLException {
