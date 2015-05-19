@@ -5,21 +5,14 @@ import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Base64;
-import java.util.Date;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.mdpnp.devices.IceQos;
-import org.mdpnp.hiberdds.mappings.Numeric;
-import org.mdpnp.hiberdds.mappings.NumericSample;
-import org.mdpnp.hiberdds.util.HibernateUtil;
 import org.mdpnp.rtiapi.data.QosProfiles;
 
 import com.google.common.cache.Cache;
@@ -69,41 +62,16 @@ public class DDSWriterJDBC {
     
     public void start() throws SQLException {
         DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
-        conn = DriverManager.getConnection("jdbc:oracle:thin:@192.168.7.25:1521/XE", "openice", "openice");
+        conn = DriverManager.getConnection("jdbc:oracle:thin:@192.168.7.25:1521/XE", "openice2", "openice2");
         conn.setAutoCommit(false);
         
-        insertNumericSample = conn.prepareStatement("INSERT INTO NUMERIC_SAMPLE (ID_NUMERIC_SAMPLE, ID_NUMERIC, DEVICE_TIME, PRESENTATION_TIME, SOURCE_TIME, VALUE) VALUES (NUMERIC_SAMPLE_SEQ.NEXTVAL, ?, ?, ?, ?, ?)");
+        insertNumericSample = conn.prepareStatement("INSERT INTO NUMERIC_SAMPLE (NUMERIC_SAMPLE_ID, NUMERIC_ID, SOURCE_TIME, VALUE) VALUES (NUMERIC_SAMPLE_SEQ.NEXTVAL, ?, ?, ?)");
 //        insertNumericSample = conn.prepareCall("{? = call insert_update_numeric_sample(?, ?, ?, ?, ?)}");
 //        insertNumericSample.registerOutParameter(1, java.sql.Types.INTEGER);
-        insertUpdateNumeric = conn.prepareCall("{? = call insert_update_numeric (?, ?, ?, ?, ?, ?)}");
+        insertUpdateNumeric = conn.prepareCall("{? = call INSERT_UPDATE_NUMERIC (?, ?, ?, ?, ?)}");
         insertUpdateNumeric.registerOutParameter(1, java.sql.Types.INTEGER);
         
-        {
-            PreparedStatement ps = null;
-            ResultSet rs = null;
-            
-            try {
-                ps = conn.prepareStatement("SELECT id_numeric, instance_handle FROM numeric");
-                rs = ps.executeQuery();
-                
-                int count = 0;
-                while(rs.next()) {
-                    instances.put(rs.getString(2), rs.getLong(1));
-                    count++;
-                }
-
-                System.err.println("PRELOADED " + count + " numerics");
-            } finally {
-                if(null != rs) {
-                    rs.close();
-                }
-                if(null != ps) {
-                    ps.close();
-                }
-            }
-        }
-        
-        participant = DomainParticipantFactory.get_instance().create_participant(0, 
+        participant = DomainParticipantFactory.get_instance().create_participant(15, 
                 DomainParticipantFactory.PARTICIPANT_QOS_DEFAULT,
                 null,
                 StatusKind.STATUS_MASK_NONE);
@@ -139,21 +107,22 @@ public class DDSWriterJDBC {
     private final ice.NumericSeq numericSequence = new ice.NumericSeq();
     private final SampleInfoSeq  sampleInfoSequence = new SampleInfoSeq();
     
-    Cache<String, Long> instances = CacheBuilder.newBuilder()
+    Cache<InstanceHandle_t, Long> instances = CacheBuilder.newBuilder()
             .maximumSize(1000)
             .expireAfterAccess(10, TimeUnit.MINUTES)
             .build();
     
     public void poll() {
         long start = System.nanoTime();
+        int size = 0;
 
         try {
-            System.err.println("START POLL");
+            
 
             reader.take(numericSequence, sampleInfoSequence, ResourceLimitsQosPolicy.LENGTH_UNLIMITED, SampleStateKind.ANY_SAMPLE_STATE,
                     ViewStateKind.ANY_VIEW_STATE, InstanceStateKind.ANY_INSTANCE_STATE);
-            final int sz = sampleInfoSequence.size();
-            System.err.println("Handling " + sz + " samples");
+            final int sz = size = sampleInfoSequence.size();
+            System.err.println("POLL "+sz+" samples");
             
             insertNumericSample.clearBatch();
             for(int i = 0; i < sz; i++) {
@@ -161,31 +130,31 @@ public class DDSWriterJDBC {
                 SampleInfo si = (SampleInfo) sampleInfoSequence.get(i);
                 ice.Numeric n = (ice.Numeric) numericSequence.get(i);
                 
-                String strInstanceHandle = b64Encoder.encodeToString(si.instance_handle.get_valuesI());
-                Long persistedNumeric = instances.getIfPresent(strInstanceHandle);
+                Long persistedNumeric = instances.getIfPresent(si.instance_handle);
                 
                 if(null == persistedNumeric) {
                     insertUpdateNumeric.clearParameters();
-                    insertUpdateNumeric.setString(2, strInstanceHandle);
-                    insertUpdateNumeric.setInt(3, n.instance_id);
-                    insertUpdateNumeric.setString(4, n.metric_id);
-                    insertUpdateNumeric.setString(5, n.unique_device_identifier);
+                    insertUpdateNumeric.setString(2, n.unique_device_identifier);
+                    insertUpdateNumeric.setString(3, n.metric_id);
+                    insertUpdateNumeric.setString(4, n.vendor_metric_id);
+                    insertUpdateNumeric.setInt(5, n.instance_id);
                     insertUpdateNumeric.setString(6, n.unit_id);
-                    insertUpdateNumeric.setString(7, n.vendor_metric_id);
-                    insertUpdateNumeric.execute();                    
+                    insertUpdateNumeric.execute();
 
                     persistedNumeric = insertUpdateNumeric.getLong(1);
-                    instances.put(strInstanceHandle, persistedNumeric);
+                    
+                    System.err.println("From DB this instance is " + persistedNumeric);
+                    instances.put(new InstanceHandle_t(si.instance_handle), persistedNumeric);
                 }
                 
                 if(si.valid_data) {
                     insertNumericSample.clearParameters();
                     insertNumericSample.setLong(1, persistedNumeric);
-                    insertNumericSample.setTimestamp(2, new java.sql.Timestamp(n.device_time.sec * 1000L + n.device_time.nanosec / 1000000L));
-                    insertNumericSample.setTimestamp(3, new java.sql.Timestamp(n.presentation_time.sec * 1000L + n.presentation_time.nanosec / 1000000L));
-                    insertNumericSample.setTimestamp(4, new java.sql.Timestamp(si.source_timestamp.sec * 1000L + si.source_timestamp.nanosec / 1000000L));
+//                    insertNumericSample.setTimestamp(2, new java.sql.Timestamp(n.device_time.sec * 1000L + n.device_time.nanosec / 1000000L));
+//                    insertNumericSample.setTimestamp(3, new java.sql.Timestamp(n.presentation_time.sec * 1000L + n.presentation_time.nanosec / 1000000L));
+                    insertNumericSample.setTimestamp(2, new java.sql.Timestamp(si.source_timestamp.sec * 1000L + si.source_timestamp.nanosec / 1000000L));
                     // TODO this should be a floating point number
-                    insertNumericSample.setFloat(5, n.value);
+                    insertNumericSample.setFloat(3, n.value);
                     insertNumericSample.addBatch();
                 }
             }
@@ -200,7 +169,8 @@ public class DDSWriterJDBC {
         } finally {
             reader.return_loan(numericSequence, sampleInfoSequence);
             long elapsed = System.nanoTime()-start;
-            System.err.println("END POLL took " + (elapsed/1000000000L)+"s "+(elapsed%1000000000L) + "ns");
+            long elapsedMS = elapsed / 1000000L;
+            System.err.println("END POLL took " + (elapsed/1000000000L)+"s "+(elapsed%1000000000L) + "ns "+(0==size?"NA":(""+(1.0*elapsedMS/size))) + "ms/sample");
         }
     }
 }
