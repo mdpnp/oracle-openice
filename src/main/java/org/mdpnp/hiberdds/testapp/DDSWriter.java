@@ -9,7 +9,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.hibernate.CacheMode;
+import org.hibernate.FlushMode;
 import org.hibernate.Session;
+import org.hibernate.StatelessSession;
 import org.hibernate.Transaction;
 import org.mdpnp.devices.IceQos;
 import org.mdpnp.hiberdds.mappings.Numeric;
@@ -51,8 +54,6 @@ public class DDSWriter {
         System.exit(0);
     }
     
-    private Session session;
-    
     private final Base64.Decoder b64Decoder = Base64.getDecoder();
     private final Base64.Encoder b64Encoder = Base64.getEncoder();
     
@@ -62,16 +63,19 @@ public class DDSWriter {
     private ice.NumericDataReader reader;
     
     public void start() {
-        session = HibernateUtil.getSessionFactory().openSession();
+        StatelessSession session = HibernateUtil.getSessionFactory().openStatelessSession();
         
-        List<Numeric> nums = session.createQuery("from Numeric").list();
-        for(Numeric n : nums) {
-            System.err.println("LOADED INSTANCE " + n.getInstance_handle());
-            instances.put(n.getInstance_handle(), n);
+        try {
+            List<Numeric> nums = session.createQuery("from Numeric").list();
+            for(Numeric n : nums) {
+                System.err.println("LOADED INSTANCE " + n.getInstance_handle());
+                instances.put(n.getInstance_handle(), n);
+            }
+            
+            System.err.println("PRELOADED " + nums.size() + " numerics");
+        } finally {
+            session.close();
         }
-        
-        System.err.println("PRELOADED " + nums.size() + " numerics");
-
         
         participant = DomainParticipantFactory.get_instance().create_participant(0, 
                 DomainParticipantFactory.PARTICIPANT_QOS_DEFAULT,
@@ -103,7 +107,6 @@ public class DDSWriter {
         ice.NumericTypeSupport.unregister_type(participant, ice.NumericTypeSupport.get_type_name());
         DomainParticipantFactory.get_instance().delete_participant(participant);
 
-        session.close();
     }
 
     
@@ -117,11 +120,11 @@ public class DDSWriter {
     
     public void poll() {
         long start = System.nanoTime();
-        Transaction t = session.beginTransaction();
-        
+        StatelessSession session = HibernateUtil.getSessionFactory().openStatelessSession();
+        Transaction t = null;
         try {
             System.err.println("START POLL");
-
+            t = session.beginTransaction();
             reader.take(numericSequence, sampleInfoSequence, ResourceLimitsQosPolicy.LENGTH_UNLIMITED, SampleStateKind.ANY_SAMPLE_STATE,
                     ViewStateKind.ANY_VIEW_STATE, InstanceStateKind.ANY_INSTANCE_STATE);
             final int sz = sampleInfoSequence.size();
@@ -146,7 +149,7 @@ public class DDSWriter {
                         persistedNumeric.setUnit_id(n.unit_id);
                         persistedNumeric.setVendor_metric_id(n.vendor_metric_id);
                         persistedNumeric.setInstance_handle(strInstanceHandle);
-                        session.save(persistedNumeric);
+                        session.insert(persistedNumeric);
                     } else {
                         // Found in the database
                         persistedNumeric = result;
@@ -164,10 +167,9 @@ public class DDSWriter {
                     ns.setSource_time(new Date(si.source_timestamp.sec * 1000L + si.source_timestamp.nanosec / 1000000L));
                     // TODO this should be a floating point number
                     ns.setValue((int)n.value);
-                    session.save(ns);
+                    session.insert(ns);
                 }
             }
-            // TODO there's no special reason these should be inserted transactionally
             t.commit();
             t = null;
         } catch (RETCODE_NO_DATA noData) {
@@ -179,6 +181,7 @@ public class DDSWriter {
             if(null != t) {
                 t.rollback();
             }
+            session.close();
             reader.return_loan(numericSequence, sampleInfoSequence);
             long elapsed = System.nanoTime()-start;
             System.err.println("END POLL took " + (elapsed/1000000000L)+"."+(elapsed%1000000000L) + " seconds");
