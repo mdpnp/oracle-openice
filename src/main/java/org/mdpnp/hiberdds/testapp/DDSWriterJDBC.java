@@ -7,6 +7,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
@@ -67,7 +68,9 @@ public class DDSWriterJDBC {
     private PreparedStatement insertNumericSample;
     
     public void start() throws SQLException {
+        DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
         conn = DriverManager.getConnection("jdbc:oracle:thin:@192.168.7.25:1521/XE", "openice", "openice");
+        conn.setAutoCommit(false);
         
         insertNumericSample = conn.prepareStatement("INSERT INTO NUMERIC_SAMPLE (ID_NUMERIC_SAMPLE, ID_NUMERIC, DEVICE_TIME, PRESENTATION_TIME, SOURCE_TIME, VALUE) VALUES (NUMERIC_SAMPLE_SEQ.NEXTVAL, ?, ?, ?, ?, ?)");
 //        insertNumericSample = conn.prepareCall("{? = call insert_update_numeric_sample(?, ?, ?, ?, ?)}");
@@ -187,6 +190,8 @@ public class DDSWriterJDBC {
                 }
             }
             insertNumericSample.executeBatch();
+
+            conn.commit();
         } catch (RETCODE_NO_DATA noData) {
             // TODO is it better to rollback or commit an empty transaction? 
             return;
@@ -195,7 +200,7 @@ public class DDSWriterJDBC {
         } finally {
             reader.return_loan(numericSequence, sampleInfoSequence);
             long elapsed = System.nanoTime()-start;
-            System.err.println("END POLL took " + (elapsed/1000000000L)+"."+(elapsed%1000000000L) + " seconds");
+            System.err.println("END POLL took " + (elapsed/1000000000L)+"s "+(elapsed%1000000000L) + "ns");
         }
     }
 }
