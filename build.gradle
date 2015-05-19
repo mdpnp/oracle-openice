@@ -33,7 +33,12 @@ dependencies{
 	compile 'org.slf4j:slf4j-api:1.7.7'  //--this is actually a dependency of hibernate core
  	compile 'org.slf4j:slf4j-log4j12:1.7.7'  //adapter for SLF4j - log4j
 
-	compile 'org.mdpnp:demo-devices:0.6.2' 
+	compile(group: 'org.mdpnp', name: 'demo-devices', version: '0.6.2') {
+       transitive = false
+	}
+    compile 'org.mdpnp:x73-idl-rti-dds:0.6.2'
+    
+    compile 'com.google.guava:guava:18.0'
 }
 
 
