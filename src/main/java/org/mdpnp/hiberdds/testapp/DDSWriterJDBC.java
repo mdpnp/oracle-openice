@@ -1,18 +1,18 @@
 package org.mdpnp.hiberdds.testapp;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -44,6 +44,8 @@ public class DDSWriterJDBC {
             String dbUrl = "jdbc:oracle:thin:@192.168.7.25:1521/XE";
             String dbUser = "openice2";
             String dbPass = "openice2";
+            List<String> partition = new ArrayList<String>();
+            
             
             if(config.canRead()) {
                 props.load(new FileInputStream(config));
@@ -51,13 +53,27 @@ public class DDSWriterJDBC {
                 dbUrl    = props.getProperty("url", dbUrl);
                 dbUser   = props.getProperty("user", dbUser);
                 dbPass   = props.getProperty("pass", dbPass);
+                String partitionList = props.getProperty("partition", null);
+                if(null != partitionList) {
+                    partition.addAll(Arrays.asList(partitionList.split(",")));
+                }
             }
             
             domainId = args.length > 0 ? Integer.parseInt(args[0]) : 15;
             dbUrl = args.length > 1 ? args[1] : "jdbc:oracle:thin:@192.168.7.25:1521/XE";
             dbUser = args.length > 2 ? args[2] : "openice2";
             dbPass = args.length > 3 ? args[3] : "openice2";
-            writer.start(domainId, dbUrl, dbUser, dbPass);
+            
+            for(int i = 4; i < args.length; i++) {
+                partition.add(args[i]);
+            }
+            
+            if(partition.isEmpty()) {
+                partition.add("*");
+            }
+            
+            
+            writer.start(domainId, partition.toArray(new String[0]), dbUrl, dbUser, dbPass);
         }
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         ScheduledFuture<?> task = executor.scheduleAtFixedRate(() -> writer.poll(), INTERVAL_MS - System.currentTimeMillis() % INTERVAL_MS, INTERVAL_MS,
@@ -99,7 +115,7 @@ public class DDSWriterJDBC {
       new AlarmLimitUtil(ice.AlarmLimitTopic.VALUE)
     };
 
-    public void start(int domainId, String dbUrl, String username, String password) throws SQLException, ClassNotFoundException {
+    public void start(int domainId, String[] partition, String dbUrl, String username, String password) throws SQLException, ClassNotFoundException {
 //        DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
         Class.forName("oracle.jdbc.driver.OracleDriver");
         conn = DriverManager.getConnection(dbUrl, username, password);
@@ -116,7 +132,9 @@ public class DDSWriterJDBC {
 
         SubscriberQos sQos = new SubscriberQos();
         subscriber.get_qos(sQos);
-        sQos.partition.name.add("*");
+        for(String p : partition) {
+            sQos.partition.name.add(p);
+        }
         subscriber.set_qos(sQos);
 
         for(IceType it : iceTypes) {
