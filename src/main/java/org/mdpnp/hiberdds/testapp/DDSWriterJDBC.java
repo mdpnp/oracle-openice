@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -19,12 +22,14 @@ import com.rti.dds.subscription.SubscriberQos;
 
 public class DDSWriterJDBC {
 
+    private static final long INTERVAL_MS = 10000L;
+    
     public static void main(String[] args) throws IOException, InterruptedException, SQLException {
         IceQos.loadAndSetIceQos();
         DDSWriterJDBC writer = new DDSWriterJDBC();
         writer.start();
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-        ScheduledFuture<?> task = executor.scheduleAtFixedRate(() -> writer.poll(), 1000L - System.currentTimeMillis() % 1000L, 10000L,
+        ScheduledFuture<?> task = executor.scheduleAtFixedRate(() -> writer.poll(), INTERVAL_MS - System.currentTimeMillis() % INTERVAL_MS, INTERVAL_MS,
                 TimeUnit.MILLISECONDS);
         System.in.read();
         task.cancel(false);
@@ -43,7 +48,10 @@ public class DDSWriterJDBC {
     private final IceType[] iceTypes = new IceType[] {
       new NumericUtil(ice.NumericTopic.VALUE),
       new AlertUtil(ice.PatientAlertTopic.VALUE),
-      new AlertUtil(ice.TechnicalAlertTopic.VALUE)
+      new AlertUtil(ice.TechnicalAlertTopic.VALUE),
+      new DeviceConnectivityUtil(ice.DeviceConnectivityTopic.VALUE),
+      new DeviceIdentityUtil(ice.DeviceIdentityTopic.VALUE),
+      new AlarmLimitUtil(ice.AlarmLimitTopic.VALUE)
     };
 
     public void start() throws SQLException {
@@ -83,7 +91,10 @@ public class DDSWriterJDBC {
         conn.close();
     }
 
+    private final DateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+    
     public void poll() {
+        String startTime = sdf.format(new Date());
         long start = System.nanoTime();
         int size = 0;
 
@@ -93,7 +104,7 @@ public class DDSWriterJDBC {
 
         long elapsed = System.nanoTime() - start;
         long elapsedMS = elapsed / 1000000L;
-        System.err.println("END POLL took " + (elapsed / 1000000000L) + "s " + (elapsed % 1000000000L) + "ns "
+        System.err.println(startTime+" END POLL " + size + " samples took " + (elapsed / 1000000000L) + "s " + (elapsed % 1000000000L) + "ns "
                 + (0 == size ? "NA" : ("" + (1.0 * elapsedMS / size))) + "ms/sample");
     }
 }
