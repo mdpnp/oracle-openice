@@ -63,41 +63,25 @@ public class DDSWriterJDBC {
         ScheduledFuture<?> task = executor.scheduleAtFixedRate(() -> writer.poll(), INTERVAL_MS - System.currentTimeMillis() % INTERVAL_MS, INTERVAL_MS,
                 TimeUnit.MILLISECONDS);
 
-
-        final CountDownLatch latch = new CountDownLatch(1);
-        new Thread(() -> {
-            System.out.println("Type quit to exit");
-            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-            String line;
-            try {
-                while(null != (line=reader.readLine())) {
-                    if("quit".equals(line)) {
-                        break;
-                    } else {
-                        System.err.println("Unknown command " + line);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                
-            } finally {
-                latch.countDown();
-            }
-        }).start();
+        System.err.println("Ctrl-C (send SIGINT) to exit");
         
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
-                latch.countDown();
+                System.err.print("Exiting...");
+                task.cancel(false);
+                executor.shutdown();
+                try {
+                    executor.awaitTermination(1, TimeUnit.MINUTES);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    writer.stop();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
         }));
-        
-        latch.await();
-
-        task.cancel(false);
-        executor.shutdown();
-        executor.awaitTermination(1, TimeUnit.MINUTES);
-        writer.stop();
-        System.exit(0);
     }
 
     private DomainParticipant participant;

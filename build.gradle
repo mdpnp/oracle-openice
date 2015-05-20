@@ -1,12 +1,12 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
-apply plugin: 'war'
 apply plugin: 'application'
 
 mainClassName = 'org.mdpnp.hiberdds.testapp.DDSWriterJDBC'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
+
 //adding Maven repository
 repositories {
     mavenLocal()
@@ -20,37 +20,16 @@ dependencies{
 //http://stackoverflow.com/questions/9898499/oracle-jdbc-ojdbc6-jar-as-a-maven-dependency
 //http://stackoverflow.com/a/1074971/3961519
 //compile 'com.oracle:ojdbc14:12.1.0.x'
-	
+
 
 //Oracle connector
 //http://mvnrepository.com/artifact/com.oracle/ojdbc14/10.2.0.4.0
-	runtime 'com.oracle:ojdbc6:11.2.0.3'
-	
-	compile(group: 'org.mdpnp', name: 'demo-devices', version: '0.6.2') {
+    runtime 'com.oracle:ojdbc6:11.2.0.3'
+    
+    compile(group: 'org.mdpnp', name: 'demo-devices', version: '0.6.2') {
        transitive = false
-	}
+    }
     compile 'org.mdpnp:x73-idl-rti-dds:0.6.2'
     
     compile 'com.google.guava:guava:18.0'
-}
-
-
-buildscript {
-    repositories {
-        maven {
-            url 'http://dl.bintray.com/steffenschaefer/maven'
-        }
-        mavenCentral()
-        flatDir {
-            dirs 'lib'
-        }
-    }
-    
-    //https://github.com/flyway/flyway/issues/782
-    dependencies {
-       // files ('lib/ojdbc6.jar')
-         classpath files('lib/ojdbc6.jar')
-         fileTree(dir: 'lib', include: '*.jar')
-    }
-
 }
