@@ -26,10 +26,9 @@ dependencies{
 //http://mvnrepository.com/artifact/com.oracle/ojdbc14/10.2.0.4.0
     runtime 'com.oracle:ojdbc6:11.2.0.3'
     
-    compile(group: 'org.mdpnp', name: 'demo-devices', version: '0.6.2') {
-       transitive = false
-    }
-    compile 'org.mdpnp:x73-idl-rti-dds:0.6.2'
+    runtime 'org.slf4j:slf4j-simple:1.7.5'
+   
+    compile 'org.mdpnp:x73-idl-rti-dds:0.6.3'
     
     compile 'com.google.guava:guava:18.0'
 }
