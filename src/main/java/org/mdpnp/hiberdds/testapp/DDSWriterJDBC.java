@@ -1,8 +1,10 @@
 package org.mdpnp.hiberdds.testapp;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -10,6 +12,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -59,8 +62,37 @@ public class DDSWriterJDBC {
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         ScheduledFuture<?> task = executor.scheduleAtFixedRate(() -> writer.poll(), INTERVAL_MS - System.currentTimeMillis() % INTERVAL_MS, INTERVAL_MS,
                 TimeUnit.MILLISECONDS);
-        System.err.println("Press enter to end the program");
-        System.in.read();
+
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        new Thread(() -> {
+            System.out.println("Type quit to exit");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+            String line;
+            try {
+                while(null != (line=reader.readLine())) {
+                    if("quit".equals(line)) {
+                        break;
+                    } else {
+                        System.err.println("Unknown command " + line);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                
+            } finally {
+                latch.countDown();
+            }
+        }).start();
+        
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            public void run() {
+                latch.countDown();
+            }
+        }));
+        
+        latch.await();
+
         task.cancel(false);
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.MINUTES);
