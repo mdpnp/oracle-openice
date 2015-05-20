@@ -1,6 +1,9 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'war'
+apply plugin: 'application'
+
+mainClassName = 'org.mdpnp.hiberdds.testapp.DDSWriterJDBC'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8

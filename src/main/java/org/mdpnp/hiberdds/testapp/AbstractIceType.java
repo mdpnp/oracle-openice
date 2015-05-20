@@ -54,6 +54,7 @@ public abstract class AbstractIceType<R extends DataReader, D extends Copyable, 
     private final S sequence;
     private final SampleInfoSeq  sampleInfoSequence = new SampleInfoSeq();    
     
+    @SuppressWarnings("unchecked")
     public AbstractIceType(final String topicString, 
                            final Class<? extends D> dataClass,
                            final String qosProfileName) {
@@ -128,6 +129,7 @@ public abstract class AbstractIceType<R extends DataReader, D extends Copyable, 
         insertUpdateInstance.registerOutParameter(1, java.sql.Types.INTEGER);
     }
     
+    @SuppressWarnings("unchecked")
     public void register(final DomainParticipant participant, final Subscriber subscriber) {
         try {
             register_type.invoke(null, participant, get_type_name.invoke(null));
@@ -155,12 +157,11 @@ public abstract class AbstractIceType<R extends DataReader, D extends Copyable, 
         try {
             take.invoke(reader, sequence, sampleInfoSequence, ResourceLimitsQosPolicy.LENGTH_UNLIMITED, SampleStateKind.ANY_SAMPLE_STATE,
                     ViewStateKind.ANY_VIEW_STATE, InstanceStateKind.ANY_INSTANCE_STATE);
-            final int sz = size = sampleInfoSequence.size();
+            size = sampleInfoSequence.size();
            
             batchUpdate(reader, sequence, sampleInfoSequence);
             insertSample.getConnection().commit();
         } catch (RETCODE_NO_DATA noData) {
-            // TODO is it better to rollback or commit an empty transaction? 
             return 0;
         } catch (InvocationTargetException ite) {
             if(!(ite.getCause() instanceof RETCODE_NO_DATA)) {
@@ -184,6 +185,7 @@ public abstract class AbstractIceType<R extends DataReader, D extends Copyable, 
         return size;
     }    
     
+    @SuppressWarnings("unchecked")
     private int batchUpdate(final R reader, final S sequence, final SampleInfoSeq sampleInfoSequence) throws SQLException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
         insertSample.clearBatch();
         final int sz = sampleInfoSequence.size();

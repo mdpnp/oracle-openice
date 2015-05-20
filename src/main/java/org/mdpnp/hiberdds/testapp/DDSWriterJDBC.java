@@ -1,5 +1,7 @@
 package org.mdpnp.hiberdds.testapp;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -7,6 +9,7 @@ import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -20,17 +23,43 @@ import com.rti.dds.infrastructure.StatusKind;
 import com.rti.dds.subscription.Subscriber;
 import com.rti.dds.subscription.SubscriberQos;
 
+
 public class DDSWriterJDBC {
 
     private static final long INTERVAL_MS = 10000L;
     
-    public static void main(String[] args) throws IOException, InterruptedException, SQLException {
+    public static void main(String[] args) throws IOException, InterruptedException, SQLException, ClassNotFoundException {
         IceQos.loadAndSetIceQos();
         DDSWriterJDBC writer = new DDSWriterJDBC();
-        writer.start();
+        
+        {
+        
+            Properties props = new Properties();
+            File config = new File(".config");
+            
+            int domainId = 15;
+            String dbUrl = "jdbc:oracle:thin:@192.168.7.25:1521/XE";
+            String dbUser = "openice2";
+            String dbPass = "openice2";
+            
+            if(config.canRead()) {
+                props.load(new FileInputStream(config));
+                domainId = Integer.parseInt(props.getProperty("domain", Integer.toString(domainId)));
+                dbUrl    = props.getProperty("url", dbUrl);
+                dbUser   = props.getProperty("user", dbUser);
+                dbPass   = props.getProperty("pass", dbPass);
+            }
+            
+            domainId = args.length > 0 ? Integer.parseInt(args[0]) : 15;
+            dbUrl = args.length > 1 ? args[1] : "jdbc:oracle:thin:@192.168.7.25:1521/XE";
+            dbUser = args.length > 2 ? args[2] : "openice2";
+            dbPass = args.length > 3 ? args[3] : "openice2";
+            writer.start(domainId, dbUrl, dbUser, dbPass);
+        }
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         ScheduledFuture<?> task = executor.scheduleAtFixedRate(() -> writer.poll(), INTERVAL_MS - System.currentTimeMillis() % INTERVAL_MS, INTERVAL_MS,
                 TimeUnit.MILLISECONDS);
+        System.err.println("Press enter to end the program");
         System.in.read();
         task.cancel(false);
         executor.shutdown();
@@ -54,16 +83,17 @@ public class DDSWriterJDBC {
       new AlarmLimitUtil(ice.AlarmLimitTopic.VALUE)
     };
 
-    public void start() throws SQLException {
-        DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
-        conn = DriverManager.getConnection("jdbc:oracle:thin:@192.168.7.25:1521/XE", "openice2", "openice2");
+    public void start(int domainId, String dbUrl, String username, String password) throws SQLException, ClassNotFoundException {
+//        DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
+        Class.forName("oracle.jdbc.driver.OracleDriver");
+        conn = DriverManager.getConnection(dbUrl, username, password);
         conn.setAutoCommit(false);
 
         for(IceType it : iceTypes) {
             it.prepare(conn);
         }
         
-        participant = DomainParticipantFactory.get_instance().create_participant(15, DomainParticipantFactory.PARTICIPANT_QOS_DEFAULT, null,
+        participant = DomainParticipantFactory.get_instance().create_participant(domainId, DomainParticipantFactory.PARTICIPANT_QOS_DEFAULT, null,
                 StatusKind.STATUS_MASK_NONE);
 
         subscriber = participant.create_subscriber(DomainParticipant.SUBSCRIBER_QOS_DEFAULT, null, StatusKind.STATUS_MASK_NONE);
