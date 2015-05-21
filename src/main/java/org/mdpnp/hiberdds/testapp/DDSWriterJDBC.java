@@ -42,8 +42,8 @@ public class DDSWriterJDBC {
             
             int domainId = 15;
             String dbUrl = "jdbc:oracle:thin:@192.168.7.25:1521/XE";
-            String dbUser = "openice2";
-            String dbPass = "openice2";
+            String dbUser = "openice";
+            String dbPass = "openice";
             List<String> partition = new ArrayList<String>();
             
             
@@ -60,9 +60,9 @@ public class DDSWriterJDBC {
             }
             
             domainId = args.length > 0 ? Integer.parseInt(args[0]) : 15;
-            dbUrl = args.length > 1 ? args[1] : "jdbc:oracle:thin:@192.168.7.25:1521/XE";
-            dbUser = args.length > 2 ? args[2] : "openice2";
-            dbPass = args.length > 3 ? args[3] : "openice2";
+            dbUrl = args.length > 1 ? args[1] : dbUrl;
+            dbUser = args.length > 2 ? args[2] : dbUser;
+            dbPass = args.length > 3 ? args[3] : dbPass;
             
             for(int i = 4; i < args.length; i++) {
                 partition.add(args[i]);
