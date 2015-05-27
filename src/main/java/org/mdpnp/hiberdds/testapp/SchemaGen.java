@@ -64,15 +64,11 @@ public class SchemaGen {
         out.print(sqlName);
         out.print(" PRIMARY KEY (");
         out.print(sqlName);
-        out.println("_ID)");
-        out.println(");");
-        
-        // Unique constraint on key fields
-        out.print("CREATE UNIQUE INDEX ");
+        out.println("_ID),");
+        out.print("    CONSTRAINT ");
         out.print(sqlName);
-        out.print("_UNIQUE_KEYS ON ");
-        out.print(sqlName);
-        out.print(" (");
+        out.print("_UNIQUE_INDEX UNIQUE (");
+
         boolean first = true;
         for(int i = 0; i < typeCode.member_count(); i++) {
             if(typeCode.is_member_key(i) && null != oracletype(typeCode.member_type(i), true)) {
@@ -84,6 +80,7 @@ public class SchemaGen {
                 out.print(typeCode.member_name(i).toUpperCase());
             }
         }
+        out.println(")");
         out.println(");");
         
         // a sequence for the instances
@@ -107,30 +104,42 @@ public class SchemaGen {
         out.print(sqlName);
         out.print("_LIFECYCLE PRIMARY KEY (");
         out.print(sqlName);
-        out.println("_LIFECYCLE_ID)");
+        out.println("_LIFECYCLE_ID),");
+        out.print("    CONSTRAINT FK_");
+        out.print(sqlName);
+        out.print("_LIFECYCLE FOREIGN KEY (");
+        out.print(sqlName);
+        out.println("_ID)");
+        out.print("        REFERENCES ");
+        out.print(sqlName);
+        out.print("(");
+        out.print(sqlName);
+        out.println("_ID)");
+        out.println("        ON DELETE CASCADE");
         out.println(");");
         
         // Index on the lifecycle table
-        out.print("CREATE INDEX FK_LIFECYCLE_");
-        out.print(sqlName);
-        out.print(" ON ");
-        out.print(sqlName);
-        out.print("_LIFECYCLE (");
-        out.print(sqlName);
-        out.println("_ID);");
+//        out.print("CREATE INDEX FK_LIFECYCLE_");
+//        out.print(sqlName);
+//        out.print(" ON ");
+//        out.print(sqlName);
+//        out.print("_LIFECYCLE (");
+//        out.print(sqlName);
+//        out.println("_ID);");
         
         // lifecycle integrity constraint
-        out.print("ALTER TABLE ");
-        out.print(sqlName);
-        out.println("_LIFECYCLE");
-        out.print("    ADD FOREIGN KEY (");
-        out.print(sqlName);
-        out.println("_ID)");
-        out.print("    REFERENCES ");
-        out.print(sqlName);
-        out.print(" (");
-        out.print(sqlName);
-        out.println("_ID);");
+//        out.print("ALTER TABLE ");
+//        out.print(sqlName);
+//        out.println("_LIFECYCLE");
+//        out.print("    ADD FOREIGN KEY (");
+//        out.print(sqlName);
+//        out.println("_ID)");
+//        out.print("    REFERENCES ");
+//        out.print(sqlName);
+//        out.print(" (");
+//        out.print(sqlName);
+//        out.println("_ID)");
+//        out.println("    ON DELETE CASCADE;");
         
         // a sequence for the lifecycles
         out.print("CREATE SEQUENCE ");
@@ -166,30 +175,43 @@ public class SchemaGen {
         out.print(sqlName);
         out.print("_SAMPLE PRIMARY KEY (");
         out.print(sqlName);
-        out.println("_SAMPLE_ID)");
-        out.println(");");
-
-        // foreign key constraint for sample table
-        out.print("CREATE INDEX FK_");
+        out.println("_SAMPLE_ID),");
+        out.print("    CONSTRAINT FK_");
         out.print(sqlName);
-        out.print("_ID ON ");
-        out.print(sqlName);
-        out.print("_SAMPLE (");
-        out.print(sqlName);
-        out.println("_ID);");
-        
-        // sample integrity constraint
-        out.print("ALTER TABLE ");
-        out.print(sqlName);
-        out.println("_SAMPLE");
-        out.print("    ADD FOREIGN KEY (");
+        out.print("_SAMPLE FOREIGN KEY (");
         out.print(sqlName);
         out.println("_ID)");
-        out.print("    REFERENCES ");
+        out.print("        REFERENCES ");
         out.print(sqlName);
-        out.print(" (");
+        out.print("(");
         out.print(sqlName);
-        out.println("_ID);");
+        out.println("_ID)");
+        out.println("        ON DELETE CASCADE");
+
+        out.println(") ORGANIZATION INDEX;");
+
+        // foreign key constraint for sample table
+//        out.print("CREATE INDEX FK_");
+//        out.print(sqlName);
+//        out.print("_ID ON ");
+//        out.print(sqlName);
+//        out.print("_SAMPLE (");
+//        out.print(sqlName);
+//        out.println("_ID);");
+        
+        // sample integrity constraint
+//        out.print("ALTER TABLE ");
+//        out.print(sqlName);
+//        out.println("_SAMPLE");
+//        out.print("    ADD FOREIGN KEY (");
+//        out.print(sqlName);
+//        out.println("_ID)");
+//        out.print("    REFERENCES ");
+//        out.print(sqlName);
+//        out.print(" (");
+//        out.print(sqlName);
+//        out.println("_ID)");
+//        out.println("    ON DELETE CASCADE;");
         
         // a sequence for the samples
         out.print("CREATE SEQUENCE ");
