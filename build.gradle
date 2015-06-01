@@ -32,3 +32,10 @@ dependencies{
     
     compile 'com.google.guava:guava:18.0'
 }
+
+
+task schemaGen(type: JavaExec, dependsOn: 'classes') {
+	main = 'org.mdpnp.hiberdds.testapp.SchemaGen'
+	classpath = sourceSets.main.runtimeClasspath
+    standardOutput = new FileOutputStream("schema.sql")
+}
