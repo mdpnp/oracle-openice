@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'application'
 
-mainClassName = 'org.mdpnp.hiberdds.testapp.DDSWriterJDBC'
+mainClassName = 'org.mdpnp.oracle.DDSWriterJDBC'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -35,7 +35,7 @@ dependencies{
 
 
 task schemaGen(type: JavaExec, dependsOn: 'classes') {
-	main = 'org.mdpnp.hiberdds.testapp.SchemaGen'
+	main = 'org.mdpnp.oracle.SchemaGen'
 	classpath = sourceSets.main.runtimeClasspath
     standardOutput = new FileOutputStream("schema.sql")
 }

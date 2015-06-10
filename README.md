@@ -53,7 +53,7 @@ Getting Started
 
 1. Run the software from your local installation
     ```bash
-    build/install/HiberDDS/bin/HiberDDS
+    build/install/oracle-openice/bin/oracle-openice
     ````
 
 1. Send `SIGINT` (Ctrl-C) when you would like to exit

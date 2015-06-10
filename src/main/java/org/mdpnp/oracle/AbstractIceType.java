@@ -1,4 +1,4 @@
-package org.mdpnp.hiberdds.testapp;
+package org.mdpnp.oracle;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;

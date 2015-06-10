@@ -1,4 +1,4 @@
-package org.mdpnp.hiberdds.testapp;
+package org.mdpnp.oracle;
 
 import org.mdpnp.rtiapi.data.QosProfiles;
 
